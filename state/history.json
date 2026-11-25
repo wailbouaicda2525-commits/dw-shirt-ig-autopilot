@@ -1,6 +1,14 @@
 {
-  "used_ids": [],
+  "used_ids": ["R001"],
   "cycle": 1,
-  "last_type": null,
-  "history": []
+  "last_type": "reel",
+  "history": [
+    {
+      "id": "R001",
+      "type": "reel",
+      "style": "cinema_3beat",
+      "angle": "imagination_blank",
+      "published_utc": "2026-11-25T17:23:31+00:00"
+    }
+  ]
 }
