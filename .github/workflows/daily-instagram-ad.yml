@@ -1,0 +1,119 @@
+name: DW SHIRT — Daily Instagram Creative Ad Factory
+
+on:
+  schedule:
+    # Daily at 17:13 UTC (18:13 Algeria time — prime evening Instagram scroll!)
+    # Automatically alternates: Day 1 = Creative Reel, Day 2 = Creative Poster, Day 3 = Reel...
+    - cron: '13 17 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'نوع الإشهار (auto = تناوب أوتوماتيكي يوم ريل / يوم بوستر)'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - reel
+          - poster
+      ad_id:
+        description: 'اختياري: رقم إشهار معيّن من بنك العام الكامل (مثلاً R001..R183 أو P001..P182)'
+        required: false
+        default: ''
+      custom_hook:
+        description: 'اختياري (تراند سريع): السطر الأول بالدارجة'
+        required: false
+        default: ''
+      custom_punchline:
+        description: 'اختياري (تراند سريع): السطر الذهبي القوي'
+        required: false
+        default: ''
+      custom_subline:
+        description: 'اختياري (تراند سريع): السطر التوضيحي تحت'
+        required: false
+        default: ''
+      custom_scene:
+        description: 'اختياري: اسم الخلفية (مثلاً s01_blank_canvas.jpg)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dw-shirt-ig-publish
+  cancel-in-progress: false
+
+jobs:
+  render-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system Arabic shaping libs (HarfBuzz + FriBidi + Raqm) & Python deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libfribidi0 libharfbuzz0b libraqm0
+          python -m pip install --upgrade pip -q
+          pip install -r requirements.txt -q
+          python -c "from PIL import features; print('PIL RAQM ENABLED:', features.check('raqm'))"
+
+      - name: Phase 1 — Render Today's Unique Creative Ad
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          ARGS="--phase render --mode ${{ inputs.mode || 'auto' }}"
+          if [ -n "${{ inputs.ad_id }}" ]; then
+            ARGS="$ARGS --ad-id ${{ inputs.ad_id }}"
+          fi
+          if [ -n "${{ inputs.custom_hook }}" ] && [ -n "${{ inputs.custom_punchline }}" ]; then
+            python dw_factory.py --phase render \
+              --mode "${{ inputs.mode || 'poster' }}" \
+              --custom-hook "${{ inputs.custom_hook }}" \
+              --custom-punchline "${{ inputs.custom_punchline }}" \
+              --custom-subline "${{ inputs.custom_subline }}" \
+              --custom-scene "${{ inputs.custom_scene }}"
+          else
+            python dw_factory.py $ARGS
+          fi
+
+      - name: Push Rendered Media to Public CDN Branch (Zero-Redirect Direct HTTPS for Instagram)
+        run: |
+          git config user.name "dw-shirt-bot"
+          git config user.email "dw-shirt-bot@users.noreply.github.com"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git add published/
+          if ! git diff --cached --quiet; then
+            git commit -m "cdn: publish today's DW SHIRT creative ad"
+            git push origin "${{ github.ref_name }}"
+          fi
+
+      - name: Phase 2 — Verify CDN HTTP 200, Publish to Instagram via Make #2 & Notify Telegram
+        env:
+          MAKE_DW_WEBHOOK_URL: ${{ secrets.MAKE_DW_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python dw_factory.py --phase publish
+
+      - name: Save Anti-Repeat History State
+        run: |
+          git config user.name "dw-shirt-bot"
+          git config user.email "dw-shirt-bot@users.noreply.github.com"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git add state/history.json published/
+          if ! git diff --cached --quiet; then
+            git commit -m "state: record published DW SHIRT creative ad"
+            git push origin "${{ github.ref_name }}"
+          fi
