@@ -92,10 +92,10 @@ jobs:
         run: |
           git config user.name "dw-shirt-bot"
           git config user.email "dw-shirt-bot@users.noreply.github.com"
-          git pull --rebase origin "${{ github.ref_name }}"
           git add published/
           if ! git diff --cached --quiet; then
             git commit -m "cdn: publish today's DW SHIRT creative ad"
+            git pull --rebase origin "${{ github.ref_name }}"
             git push origin "${{ github.ref_name }}"
           fi
 
@@ -111,9 +111,9 @@ jobs:
         run: |
           git config user.name "dw-shirt-bot"
           git config user.email "dw-shirt-bot@users.noreply.github.com"
-          git pull --rebase origin "${{ github.ref_name }}"
           git add state/history.json published/
           if ! git diff --cached --quiet; then
             git commit -m "state: record published DW SHIRT creative ad"
+            git pull --rebase origin "${{ github.ref_name }}"
             git push origin "${{ github.ref_name }}"
           fi
