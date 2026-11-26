@@ -1,7 +1,10 @@
 {
-  "used_ids": ["R001"],
+  "used_ids": [
+    "R001",
+    "P001"
+  ],
   "cycle": 1,
-  "last_type": "reel",
+  "last_type": "poster",
   "history": [
     {
       "id": "R001",
@@ -9,6 +12,12 @@
       "style": "cinema_3beat",
       "angle": "imagination_blank",
       "published_utc": "2026-11-25T17:23:31+00:00"
+    },
+    {
+      "id": "P001",
+      "media_type": "photo",
+      "style": "side_vertical_bar",
+      "published_utc": "2026-11-26T18:20:26.227129+00:00"
     }
   ]
 }
